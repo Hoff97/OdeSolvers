@@ -51,14 +51,17 @@ requirejs(["regl"], function(regl) {
 
   const float pi = 3.1415926535897932384626433832795;
   const float maxSpeed = 10.0*pi;
-  const float dt = 0.1;
+  const float dt = 0.0001;
+  const float g = 9.81;
+  const float l = 0.25;
+  const float m = 9.81;
 
   void toAngle(in float t,inout float angle) {
-    angle = t*2.0*pi-pi;
+    angle = t*4.0*pi-2.0*pi;
   }
 
   void fromAngle(in float angle, inout float t) {
-    t = (angle+pi)/(2.0*pi);
+    t = (angle+2.0*pi)/(4.0*pi);
   }
 
   void toSpeed(in float t,inout float speed) {
@@ -69,21 +72,11 @@ requirejs(["regl"], function(regl) {
     t = (speed+maxSpeed)/(2.0*maxSpeed);
   }
 
-  void clipCircle(in float angle, out float an) {
-    if(angle > 2.0*pi) {
-      an = angle-2.0*pi;
-    } else if(angle < 0.0) {
-      an = angle+2.0*pi;
-    } else {
-      an = angle;
-    }
-  }
-
-  void clipInterval(in float t, in float max, out float tr) {
-    if(t > max) {
-      tr = max;
+  void clipZero(in float t, out float tr) {
+    if(t > 1.0) {
+      tr = t-1.0;
     } else if(t < 0.0) {
-      tr = 0.0;
+      tr = t+1.0;
     } else {
       tr = t;
     }
@@ -95,19 +88,37 @@ requirejs(["regl"], function(regl) {
     float b = texture2D(prevState, uv).b;
     float a = texture2D(prevState, uv).a;
 
-    float a1 = 0.0;
-    float a2 = 0.0;
-    float s1 = 0.0;
-    float s2 = 0.0;
+    float r1 = 0.0;
+    float r2 = 0.0;
+    float p1 = 0.0;
+    float p2 = 0.0;
 
-    toAngle(r,a1);
-    toAngle(g,a2);
-    toSpeed(b,s1);
-    toSpeed(a,s2);
+    toAngle(r,r1);
+    toAngle(g,r2);
+    toSpeed(b,p1);
+    toSpeed(a,p2);
 
+    float rho1 = 6.0/(m*l*l)*(2.0*p1-3.0*cos(r1-r2)*p2)/(16.0-9.0*(pow(cos(r1-r2),2.0)));
+    float rho2 = 6.0/(m*l*l)*(8.0*p2-3.0*cos(r1-r2)*p1)/(16.0-9.0*(pow(cos(r1-r2),2.0)));
+    float p1d = (-m*l*l)/2.0*(rho1*rho2*sin(r1-r2)+3.0*g/l*sin(r1));
+    float p2d = (-m*l*l)/2.0*(-rho1*rho2*sin(r1-r2)+g/l*sin(r2));
 
+    r1 += rho1*dt;
+    r2 += rho2*dt;
+    p1 += p1d*dt;
+    p2 += p2d*dt;
 
-    gl_FragColor = vec4(r/1.05,g,b,1);
+    fromAngle(r1,r);
+    fromAngle(r2,g);
+    fromSpeed(p1,b);
+    fromSpeed(p2,a);
+
+    clipZero(r,r);
+    clipZero(g,g);
+    clipZero(b,b);
+    clipZero(a,a);
+
+    gl_FragColor = vec4(r,g,b,a);
   }`,
 
     framebuffer: ({ tick }) => state[(tick + 1) % 2]
