@@ -11,12 +11,21 @@ requirejs.config({
 });
 
 requirejs(["regl"], function(regl) {
-  var regl = regl();
+  var regl = regl({extensions: ['oes_texture_float']});
 
   const RADIUS = 512;
-  const INITIAL_CONDITIONS = Array(RADIUS * RADIUS * 4)
+  const INITIAL_CONDITIONS = Array(RADIUS)
     .fill(0)
-    .map(() => (Math.random() > 0.9 ? 255 : 0));
+    .map(() => Array(RADIUS).fill(0).map(() => Array(4).fill(0)));
+  
+  for(var i = 0; i<RADIUS; i++) {
+    for(var j = 0; j<RADIUS; j++) {
+      INITIAL_CONDITIONS[i][j][0] = i/RADIUS;
+      INITIAL_CONDITIONS[i][j][1] = j/RADIUS;
+      INITIAL_CONDITIONS[i][j][2] = 0;
+      INITIAL_CONDITIONS[i][j][3] = 1;
+    }
+  }
 
   const state = Array(2)
     .fill()
@@ -25,7 +34,10 @@ requirejs(["regl"], function(regl) {
         color: regl.texture({
           radius: RADIUS,
           data: INITIAL_CONDITIONS,
-          wrap: "repeat"
+          wrap: "repeat",
+          shape: [RADIUS, RADIUS, 4],
+          format: "rgba",
+          type: "float"
         }),
         depthStencil: false
       })
@@ -36,18 +48,66 @@ requirejs(["regl"], function(regl) {
   precision mediump float;
   uniform sampler2D prevState;
   varying vec2 uv;
-  void main() {
-    float n = 0.0;
-    for(int dx=-1; dx<=1; ++dx)
-    for(int dy=-1; dy<=1; ++dy) {
-      n += texture2D(prevState, uv+vec2(dx,dy)/float(${RADIUS})).r;
-    }
-    float s = texture2D(prevState, uv).r;
-    if(n > 3.0+s || n < 3.0) {
-      gl_FragColor = vec4(0,0,0,1);
+
+  const float pi = 3.1415926535897932384626433832795;
+  const float maxSpeed = 10.0*pi;
+  const float dt = 0.1;
+
+  void toAngle(in float t,inout float angle) {
+    angle = t*2.0*pi-pi;
+  }
+
+  void fromAngle(in float angle, inout float t) {
+    t = (angle+pi)/(2.0*pi);
+  }
+
+  void toSpeed(in float t,inout float speed) {
+    speed = t*2.0*maxSpeed-maxSpeed;
+  }
+
+  void fromSpeed(in float speed, inout float t) {
+    t = (speed+maxSpeed)/(2.0*maxSpeed);
+  }
+
+  void clipCircle(in float angle, out float an) {
+    if(angle > 2.0*pi) {
+      an = angle-2.0*pi;
+    } else if(angle < 0.0) {
+      an = angle+2.0*pi;
     } else {
-      gl_FragColor = vec4(1,1,1,1);
+      an = angle;
     }
+  }
+
+  void clipInterval(in float t, in float max, out float tr) {
+    if(t > max) {
+      tr = max;
+    } else if(t < 0.0) {
+      tr = 0.0;
+    } else {
+      tr = t;
+    }
+  }
+
+  void main() {
+    float r = texture2D(prevState, uv).r;
+    float g = texture2D(prevState, uv).g;
+    float b = texture2D(prevState, uv).b;
+    float a = texture2D(prevState, uv).a;
+
+    float a1 = 0.0;
+    float a2 = 0.0;
+    float s1 = 0.0;
+    float s2 = 0.0;
+
+    toAngle(r,a1);
+    toAngle(g,a2);
+    toSpeed(b,s1);
+    toSpeed(a,s2);
+
+
+
+    gl_FragColor = vec4(r/1.05,g,b,1);
   }`,
 
     framebuffer: ({ tick }) => state[(tick + 1) % 2]
@@ -59,8 +119,8 @@ requirejs(["regl"], function(regl) {
   uniform sampler2D prevState;
   varying vec2 uv;
   void main() {
-    float state = texture2D(prevState, uv).r;
-    gl_FragColor = vec4(vec3(state), 1);
+    vec3 state = texture2D(prevState, uv).rgb;
+    gl_FragColor = vec4(state,1);
   }`,
 
     vert: `
