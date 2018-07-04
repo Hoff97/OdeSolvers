@@ -28,7 +28,7 @@ function restartSim() {
   restart = true;
 }
 
-const RADIUS = 2048;
+var RADIUS = 1024;
 
 function setInitialConditions(init) {
   const xMinM = xMin/Math.PI;
@@ -230,5 +230,7 @@ document.addEventListener("keypress", function(ev) {
     } else {
       document.getElementById('setting').style.display = 'none';
     }
+  } else if(ev.key === 'a') {
+    pausePlay();
   }
 });
