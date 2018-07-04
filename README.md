@@ -8,7 +8,7 @@ the graphic card for accelerated computation.
 
 You can view the results here:
 * [Heat dissipation](./heat.html)
-* [Double pendulum](./pendulum.html)
+* [Double pendulum](./pendel.html)
 
 ## Double pendulum
 
