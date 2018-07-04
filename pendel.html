@@ -1,0 +1,18 @@
+<html>
+    <head>
+        <title>Pendulum Simulation</title>
+        <script data-main="pendel.js" src="lib/require.js"></script>
+    </head>
+    <body>
+        <div id="setting" style="position: fixed; top: 0px; left: 0px; z-index:100; border: 1px solid black; background: #FFF">
+            <button onclick="pausePlay()">Pause/Play</button><br/>
+            <button onclick="restartSim()">Restart</button><br/>
+            Params:
+            XMin: <input type="number" value="-3.1415" onchange="xMin = this.value"/><br/>
+            XMax: <input type="number" value="3.1415" onchange="xMay = this.value"/><br/>
+            YMin: <input type="number" value="-3.1415" onchange="yMin = this.value"/><br/>
+            YMax: <input type="number" value="3.1415" onchange="yMax = this.value"/><br/>
+            dt: <input type="number" value="0.005" onchange="dt = this.value"/><br/>
+        </div>
+    </body>
+</html>

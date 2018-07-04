@@ -10,30 +10,50 @@ requirejs.config({
   }
 });
 
-requirejs(["regl"], function(regl) {
-  var regl = regl({extensions: ['oes_texture_float']});
+var dt = 0.005;
+var xMin = -3.1415;
+var xMax = 3.1415;
+var yMin = -3.1415;
+var yMax = 3.1415;
 
-  const RADIUS = 512;
-  const INITIAL_CONDITIONS = Array(RADIUS)
-    .fill(0)
-    .map(() => Array(RADIUS).fill(0).map(() => Array(4).fill(0)));
-  
-  for(var i = 0; i<RADIUS; i++) {
-    for(var j = 0; j<RADIUS; j++) {
-      INITIAL_CONDITIONS[i][j][0] = i/RADIUS;
-      INITIAL_CONDITIONS[i][j][1] = j/RADIUS;
-      INITIAL_CONDITIONS[i][j][2] = 0;
-      INITIAL_CONDITIONS[i][j][3] = 1;
+var pause = false;
+var restart = false;
+
+function pausePlay() {
+  pause = !pause;
+}
+
+function restartSim() {
+  pause = true;
+  restart = true;
+}
+
+const RADIUS = 2048;
+
+function setInitialConditions(init) {
+  const xMinM = xMin/Math.PI;
+  const xMaxM = xMax/Math.PI;
+  const yMinM = yMin/Math.PI;
+  const yMaxM = yMax/Math.PI;
+
+  for (var i = 0; i < RADIUS; i++) {
+    for (var j = 0; j < RADIUS; j++) {
+      init[i][j][0] = (i / RADIUS*(xMaxM-xMinM)+xMinM+1)/2;
+      init[i][j][1] = (j / RADIUS*(yMaxM-yMinM)+yMinM+1)/2;
+      init[i][j][2] = 0.5;
+      init[i][j][3] = 0.5;
     }
   }
+}
 
-  const state = Array(2)
+function createFrameBuffers(regl, init) {
+  return Array(2)
     .fill()
     .map(() =>
       regl.framebuffer({
         color: regl.texture({
           radius: RADIUS,
-          data: INITIAL_CONDITIONS,
+          data: init,
           wrap: "repeat",
           shape: [RADIUS, RADIUS, 4],
           format: "rgba",
@@ -42,16 +62,30 @@ requirejs(["regl"], function(regl) {
         depthStencil: false
       })
     );
+}
+
+requirejs(["regl"], function (regl) {
+  var regl = regl({
+    extensions: ['oes_texture_float']
+  });
+
+  var INITIAL_CONDITIONS = Array(RADIUS)
+    .fill(0)
+    .map(() => Array(RADIUS).fill(0).map(() => Array(4).fill(0)));
+
+  setInitialConditions(INITIAL_CONDITIONS);
+
+  var state = createFrameBuffers(regl, INITIAL_CONDITIONS);
 
   const updateLife = regl({
     frag: `
   precision mediump float;
   uniform sampler2D prevState;
   varying vec2 uv;
+  uniform float dt;
 
   const float pi = 3.1415926535897932384626433832795;
   const float maxSpeed = 10.0*pi;
-  const float dt = 0.0001;
   const float g = 9.81;
   const float l = 0.25;
   const float m = 9.81;
@@ -121,17 +155,26 @@ requirejs(["regl"], function(regl) {
     gl_FragColor = vec4(r,g,b,a);
   }`,
 
-    framebuffer: ({ tick }) => state[(tick + 1) % 2]
+    framebuffer: ({
+      tick
+    }) => state[(tick + 1) % 2],
+
+    uniforms: ({
+      dt: ({
+        tick
+      }) => dt
+    })
   });
 
   const setupQuad = regl({
+    container: document.getElementById("container"),
     frag: `
   precision mediump float;
   uniform sampler2D prevState;
   varying vec2 uv;
   void main() {
     vec3 state = texture2D(prevState, uv).rgb;
-    gl_FragColor = vec4(state,1);
+    gl_FragColor = vec4(state.r,state.g,0,1);
   }`,
 
     vert: `
@@ -148,10 +191,14 @@ requirejs(["regl"], function(regl) {
     },
 
     uniforms: {
-      prevState: ({ tick }) => state[tick % 2]
+      prevState: ({
+        tick
+      }) => state[tick % 2]
     },
 
-    depth: { enable: false },
+    depth: {
+      enable: false
+    },
 
     count: 3
   });
@@ -159,7 +206,29 @@ requirejs(["regl"], function(regl) {
   regl.frame(() => {
     setupQuad(() => {
       regl.draw();
-      updateLife();
+      if(restart) {
+        restart = false;
+        INITIAL_CONDITIONS = Array(RADIUS)
+          .fill(0)
+          .map(() => Array(RADIUS).fill(0).map(() => Array(4).fill(0)));
+
+        setInitialConditions(INITIAL_CONDITIONS);
+
+        state = createFrameBuffers(regl, INITIAL_CONDITIONS);
+      }
+      if (!pause) {
+        updateLife();
+      }
     });
   });
+});
+
+document.addEventListener("keypress", function(ev) {
+  if(ev.key === 'c') {
+    if(document.getElementById('setting').style.display === 'none') {
+      document.getElementById('setting').style.display = 'inline'
+    } else {
+      document.getElementById('setting').style.display = 'none';
+    }
+  }
 });
