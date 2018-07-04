@@ -8,7 +8,7 @@ the graphic card for accelerated computation.
 
 You can view the results here:
 * [Heat dissipation](./heat.html)
-* [Double pendulum](./pendel.html)
+* [Double pendulum](./pendel.html) (try it [here](https://hoff97.github.io/OdeSolvers/pendel.html))
 
 ## Double pendulum
 
@@ -28,7 +28,7 @@ And after a while it looks pretty crazy:
 ![Holy shit this picture is crazy](./img/05_small.png)
 ![Why are you even looking at the alt text???](./img/17_small.png)
 
-There are more pictures in the [picture folder](./img/), but why dont you just go ahead and play with [it](./pendel.html) yourself?
+There are more pictures in the [picture folder](https://github.com/Hoff97/OdeSolvers/tree/master/img), but why dont you just go ahead and play with [it](./pendel.html) yourself?
 
 ## Technichal notes
 
